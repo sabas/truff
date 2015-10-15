@@ -1,0 +1,72 @@
+<html>
+<head>
+<title>Truff</title>
+<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css' type='text/css'/>
+<script src="filereader.js"></script>
+<script src="//api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js"></script>
+</head>
+<body>
+<div id="dropzone" style="border:1px solid black; width:300px; height:300px;">Drop files here</div>
+<div id="status">Load files</div>
+
+<input type="button" value="Merge polygons" onclick="mergePolygons()"/>
+<div id="downloadarea"></div>
+
+<script>
+var files=[];
+var fileContents=[];
+var result='';
+
+var counter=0;
+FileReaderJS.setupDrop(document.getElementById('dropzone'), {
+  readAsDefault: "Text",
+  on: {
+    load: function(e, file) {
+        counter++;
+        fileContents.push(JSON.parse(e.target.result));
+        document.getElementById('status').innerHTML="Loaded "+counter+" files";
+    }
+  }
+});
+
+/*
+Merge multiple FeatureCollection made by Polygons
+*/
+function mergePolygons(){
+    var geotemplate={
+    type: "FeatureCollection",
+    features: []
+    };
+    for (var j in fileContents){
+        var json = fileContents[j];
+        if(json['type'] != "FeatureCollection") continue;
+        for(i in json['features']){
+        var feature= json['features'][i];
+            if(feature['geometry']['type']=='Polygon')
+            geotemplate['features'].push(feature);
+        }
+    }
+    result = turf.merge(geotemplate);
+    downloadFile(JSON.stringify(result),'merged.json');
+}
+
+var downloadFile = function(file, name) {
+    var bb = new Blob([file], {type: 'text/json'});
+
+    var a = document.createElement('a');
+    a.className="butt";
+    a.download = name;
+    a.href = window.URL.createObjectURL(bb);
+    a.textContent = 'Download ready';
+
+    a.dataset.downloadurl = ['text/json', a.download, a.href].join(':');
+    a.draggable = true;
+    a.classList.add('dragout');
+
+    var tmp = document.createElement("div");
+    tmp.appendChild(a);
+    document.getElementById('downloadarea').innerHTML=tmp.innerHTML;
+};
+</script>
+</body>
+</html>
